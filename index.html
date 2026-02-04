@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DISCOVER DANGCAGAN MVD PRIMARY HEALTH CARE FACILITY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn.active { border-bottom: 3px solid #2563eb; color: #1e40af; }
+        #logBody::-webkit-scrollbar { width: 6px; }
+        #logBody::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .alert-slide-in { animation: slideIn 0.5s ease forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .modal-bg { background-color: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); }
+        #loginOverlay { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div id="loginOverlay" class="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+        <div class="glass max-w-md w-full p-8 rounded-3xl shadow-2xl text-center text-white">
+            <div class="mb-8">
+                <div class="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
+                    <img src="rhu-logo.png" alt="RHU Logo" class="w-full h-full object-cover">
+                </div>
+                <h2 class="text-2xl font-black uppercase tracking-tight">System Access</h2>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Dangcagan Health Facility</p>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="userInput" placeholder="Username" class="w-full p-4 rounded-xl bg-slate-800 border border-slate-700 text-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="password" id="passInput" placeholder="Password" class="w-full p-4 rounded-xl bg-slate-800 border border-slate-700 text-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <p id="loginError" class="text-red-400 text-xs font-bold hidden uppercase">Invalid Credentials</p>
+                <button onclick="handleLogin()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black hover:bg-blue-500 transition active:scale-95 shadow-lg shadow-blue-900/20">AUTHORIZE ACCESS</button>
+                <button onclick="showRecoveryPrompt()" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hover:text-blue-400 transition">Forgot Password?</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="summaryModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden">
+        <div class="absolute inset-0 modal-bg" onclick="closeSummary()"></div>
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative z-10 border border-slate-200">
+            <div class="text-center mb-6">
+                <div id="briefingIcon" class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                     <img src="rhu-logo.png" alt="Logo" class="w-full h-full object-cover">
+                </div>
+                <h2 id="briefingTitle" class="text-2xl font-black text-slate-800 uppercase tracking-tight">Facility Briefing</h2>
+                <p id="modalDate" class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1"></p>
+            </div>
+            <div id="statsSection" class="space-y-3 text-center">
+                <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center">
+                    <span class="text-sm font-bold text-slate-500 uppercase">Today's Patients</span>
+                    <span id="summaryPatients" class="text-xl font-black text-blue-600">0</span>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center">
+                    <span class="text-sm font-bold text-slate-500 uppercase">Low Stock Alerts</span>
+                    <span id="summaryLowStock" class="text-xl font-black text-red-600">0</span>
+                </div>
+            </div>
+            <div id="backupPromptSection" class="hidden text-center mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <p class="text-xs font-black text-emerald-700 uppercase tracking-widest mb-2">Weekly Safety Check</p>
+                <p class="text-sm text-slate-600 mb-4 font-medium">It's Friday! Would you like to backup your medicine database now?</p>
+                <button onclick="backupSystemData()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-sm hover:bg-emerald-700 transition">Download Backup</button>
+            </div>
+            <button onclick="closeSummary()" class="w-full mt-8 bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-slate-800 transition shadow-lg uppercase">Dismiss</button>
+        </div>
+    </div>
+
+    <div id="alertContainer" class="fixed bottom-6 right-6 z-[100] space-y-3 pointer-events-none"></div>
+
+    <div id="mainContent" class="max-w-7xl mx-auto blur-md pointer-events-none transition-all duration-700">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 shadow-sm flex-shrink-0">
+                    <img src="rhu-logo.png" alt="RHU Logo" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-slate-900" id="displayPharmacyName">DISCOVER DANGCAGAN MVD <span class="text-blue-600 font-medium">PRIMARY HEALTH CARE FACILITY</span></h1>
+                    <nav class="flex space-x-6 mt-2">
+                        <button onclick="showTab('dispense')" id="btn-dispense" class="tab-btn active pb-1 font-bold text-slate-400 transition text-sm">Dispensing</button>
+                        <button onclick="showTab('inventory')" id="btn-inventory" class="tab-btn pb-1 font-bold text-slate-400 transition text-sm">Manage Stock</button>
+                        <button onclick="showTab('logs')" id="btn-logs" class="tab-btn pb-1 font-bold text-slate-400 transition text-sm">History Logs</button>
+                        <button onclick="showTab('settings')" id="btn-settings" class="tab-btn pb-1 font-bold text-slate-400 transition text-sm">Settings</button>
+                    </nav>
+                </div>
+            </div>
+            <div class="text-right hidden md:block">
+                <p id="dateDisplay" class="text-sm font-mono text-slate-500"></p>
+                <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-bold uppercase tracking-widest">Facility Database Online</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total SKU</p>
+                <p class="text-2xl font-black text-slate-800" id="statTotal">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+                <p class="text-[10px] font-black text-red-400 uppercase tracking-widest">Critical Stock</p>
+                <p class="text-2xl font-black text-red-600" id="statLow">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+                <p class="text-[10px] font-black text-orange-400 uppercase tracking-widest">Expiring Soon</p>
+                <p class="text-2xl font-black text-orange-600" id="statExpiring">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+                <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest">Total Transactions</p>
+                <p class="text-2xl font-black text-blue-600" id="statIssued">0</p>
+            </div>
+        </div>
+
+        <div id="dispense" class="tab-content active">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-4">
+                    <section class="bg-white p-6 rounded-2xl shadow-xl border-2 border-blue-100">
+                        <h3 class="font-black text-blue-600 mb-4 uppercase text-sm">📋 New Prescription</h3>
+                        <input type="text" id="patientName" placeholder="Patient Full Name" class="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl outline-none mb-4 font-bold">
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <select id="dispenseSelect" class="col-span-2 p-3 bg-slate-50 border rounded-xl outline-none"></select>
+                            <input type="number" id="dispenseQty" placeholder="Qty" class="p-3 bg-slate-50 border rounded-xl outline-none">
+                        </div>
+                        <button onclick="addToCart()" class="w-full bg-blue-100 text-blue-700 py-2 rounded-xl font-bold hover:bg-blue-200 transition mb-6">+ Add to List</button>
+                        <div id="cartItems" class="space-y-2 min-h-[100px] border-t border-dashed pt-4"></div>
+                        <button onclick="confirmDispense()" class="w-full mt-6 bg-emerald-600 text-white py-4 rounded-2xl font-black hover:bg-emerald-700 shadow-lg uppercase transition">Confirm Dispense</button>
+                    </section>
+                </div>
+                <div class="lg:col-span-8">
+                    <section class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center bg-slate-50">
+                            <span class="font-bold text-slate-700 text-sm uppercase">Quick Search</span>
+                            <input type="text" id="searchInput" onkeyup="updateUI()" placeholder="Search..." class="p-2 border rounded-lg text-sm w-48 shadow-sm">
+                        </div>
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-white text-[10px] font-bold text-slate-400 border-b">
+                                <tr><th class="p-4">Medication</th><th class="p-4">Stock</th><th class="p-4 text-right">Expiry</th></tr>
+                            </thead>
+                            <tbody id="inventoryBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <div id="inventory" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-4">
+                    <section class="bg-white p-6 rounded-2xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4 uppercase text-xs" id="formTitle">Register Medicine</h3>
+                        <input type="hidden" id="editIndex" value="-1">
+                        <div class="space-y-4">
+                            <input type="text" id="medName" placeholder="Medicine Name" class="w-full p-3 bg-slate-50 border rounded-xl outline-none">
+                            <input type="number" id="medQty" placeholder="Initial Quantity" class="w-full p-3 bg-slate-50 border rounded-xl outline-none">
+                            <input type="date" id="medExpiry" class="w-full p-3 bg-slate-50 border rounded-xl outline-none">
+                            <div class="flex gap-2">
+                                <button onclick="saveMedicine()" id="saveBtn" class="flex-1 bg-slate-800 text-white py-3 rounded-xl font-bold">Save</button>
+                                <button onclick="resetInvForm()" id="cancelBtn" class="hidden flex-1 bg-slate-200 text-slate-600 py-3 rounded-xl font-bold">Cancel</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="lg:col-span-8">
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden text-sm">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
+                                <tr><th class="p-4">Medication</th><th class="p-4">Qty</th><th class="p-4 text-right">Actions</th></tr>
+                            </thead>
+                            <tbody id="manageInvBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="logs" class="tab-content">
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
+                    <h2 class="font-black text-slate-800 uppercase">Dispensing Logs</h2>
+                    <div class="flex gap-2">
+                        <button onclick="downloadCSV()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Export CSV</button>
+                        <button onclick="clearLogs()" class="text-red-500 text-[10px] font-bold px-3 uppercase">Wipe Data</button>
+                    </div>
+                </div>
+                <div id="logBody" class="divide-y divide-slate-100 max-h-[600px] overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div id="settings" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-6">
+                    <section class="bg-white p-6 rounded-2xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4 uppercase text-xs tracking-widest">System Identity</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="pharmacyNameInput" class="flex-1 p-3 bg-slate-50 border rounded-xl outline-none font-bold">
+                            <button onclick="updatePharmacyName()" class="bg-blue-600 text-white px-6 rounded-xl font-bold text-sm">Update</button>
+                        </div>
+                    </section>
+
+                    <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-700 mb-4 uppercase text-xs tracking-widest">Security Credentials</h3>
+                        <div class="space-y-3">
+                            <input type="text" id="newUsername" placeholder="New Username" class="w-full p-3 bg-slate-50 border rounded-xl outline-none text-sm">
+                            <input type="password" id="newPassword" placeholder="New Password" class="w-full p-3 bg-slate-50 border rounded-xl outline-none text-sm">
+                            <button onclick="updateCredentials()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-black text-xs uppercase transition hover:bg-slate-800">Save New Login</button>
+                        </div>
+                        <div class="mt-6 pt-4 border-t">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Emergency Recovery Key</p>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-dashed flex justify-between items-center">
+                                <span id="recoveryDisplay" class="font-mono text-sm font-bold text-blue-600">----</span>
+                                <button onclick="generateRecoveryKey()" class="text-[10px] bg-white border px-2 py-1 rounded-lg font-bold shadow-sm">GENERATE</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="bg-white p-6 rounded-2xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4 uppercase text-xs tracking-widest">Database Backup</h3>
+                        <button onclick="backupSystemData()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest">Download Backup</button>
+                    </section>
+                </div>
+                
+                <section class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h3 class="font-bold text-slate-700 mb-4 uppercase text-xs tracking-widest">Top 5 Most Dispensed</h3>
+                    <div id="analyticsChart" class="space-y-4"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inventory = JSON.parse(localStorage.getItem('pharma_v3_inv')) || [];
+        let logs = JSON.parse(localStorage.getItem('pharma_v3_logs')) || [];
+        let pharmacyName = localStorage.getItem('pharma_name') || 'DISCOVER DANGCAGAN MVD PRIMARY HEALTH CARE FACILITY';
+        let cart = [];
+
+        function handleLogin() {
+            const u = document.getElementById('userInput').value;
+            const p = document.getElementById('passInput').value;
+            const savedU = localStorage.getItem('pharma_user') || 'admin';
+            const savedP = localStorage.getItem('pharma_pass') || 'dangcagan2026';
+            if (u === savedU && p === savedP) { unlockSystem(); } else { document.getElementById('loginError').classList.remove('hidden'); }
+        }
+
+        function unlockSystem() {
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('blur-md', 'pointer-events-none');
+            checkDailyBriefing();
+        }
+
+        function showRecoveryPrompt() {
+            const key = prompt("Enter Emergency Recovery Key:");
+            const savedKey = localStorage.getItem('pharma_recovery');
+            if (key && key === savedKey) { alert("Recovery successful."); unlockSystem(); } else { alert("Invalid Key."); }
+        }
+
+        function generateRecoveryKey() {
+            const newKey = "MVD-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+            localStorage.setItem('pharma_recovery', newKey);
+            document.getElementById('recoveryDisplay').innerText = newKey;
+        }
+
+        function updateCredentials() {
+            const newU = document.getElementById('newUsername').value;
+            const newP = document.getElementById('newPassword').value;
+            if (newU && newP) {
+                localStorage.setItem('pharma_user', newU);
+                localStorage.setItem('pharma_pass', newP);
+                alert("Credentials updated!");
+            }
+        }
+
+        function checkDailyBriefing() {
+            const hasSeen = sessionStorage.getItem('briefing_seen');
+            if (hasSeen) return;
+            
+            const todayDate = new Date();
+            const todayStr = todayDate.toLocaleDateString();
+            const isFriday = todayDate.getDay() === 5; 
+
+            const todayPatients = logs.filter(l => new Date(l.id).toLocaleDateString() === todayStr).length;
+            const lowStockCount = inventory.filter(i => i.qty <= 5).length;
+            
+            document.getElementById('modalDate').innerText = todayDate.toDateString();
+            document.getElementById('summaryPatients').innerText = todayPatients;
+            document.getElementById('summaryLowStock').innerText = lowStockCount;
+
+            if(isFriday) {
+                document.getElementById('backupPromptSection').classList.remove('hidden');
+                document.getElementById('briefingTitle').innerText = "Weekly Maintenance";
+            }
+
+            document.getElementById('summaryModal').classList.remove('hidden');
+            sessionStorage.setItem('briefing_seen', 'true');
+        }
+
+        function showTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('btn-'+id).classList.add('active');
+        }
+
+        function closeSummary() { document.getElementById('summaryModal').classList.add('hidden'); }
+
+        function saveMedicine() {
+            const name = document.getElementById('medName').value;
+            const qty = parseInt(document.getElementById('medQty').value);
+            const expiry = document.getElementById('medExpiry').value;
+            const editIdx = parseInt(document.getElementById('editIndex').value);
+            if (name && qty >= 0 && expiry) {
+                if (editIdx === -1) inventory.push({ name, qty, expiry });
+                else inventory[editIdx] = { name, qty, expiry };
+                save(); resetInvForm();
+            }
+        }
+
+        function editMedicine(idx) {
+            const item = inventory[idx];
+            document.getElementById('medName').value = item.name;
+            document.getElementById('medQty').value = item.qty;
+            document.getElementById('medExpiry').value = item.expiry;
+            document.getElementById('editIndex').value = idx;
+            document.getElementById('formTitle').innerText = "Edit Entry";
+            document.getElementById('cancelBtn').classList.remove('hidden');
+        }
+
+        function deleteMedicine(idx) { if(confirm("Delete item?")) { inventory.splice(idx, 1); save(); } }
+        function resetInvForm() { ['medName', 'medQty', 'medExpiry'].forEach(id => document.getElementById(id).value = ''); document.getElementById('editIndex').value = "-1"; document.getElementById('formTitle').innerText = "Register Medicine"; document.getElementById('cancelBtn').classList.add('hidden'); }
+
+        function addToCart() {
+            const idx = document.getElementById('dispenseSelect').value;
+            const qty = parseInt(document.getElementById('dispenseQty').value);
+            if (idx !== "" && qty > 0 && inventory[idx].qty >= qty) {
+                cart.push({ invIndex: idx, name: inventory[idx].name, qty: qty });
+                document.getElementById('dispenseQty').value = '';
+                updateUI();
+            }
+        }
+
+        function confirmDispense() {
+            const patient = document.getElementById('patientName').value;
+            if (!patient || cart.length === 0) return alert("Error.");
+            let logEntry = { id: Date.now(), time: new Date().toLocaleString(), patient, items: [...cart] };
+            cart.forEach(item => { inventory[item.invIndex].qty -= item.qty; });
+            logs.unshift(logEntry); cart = [];
+            document.getElementById('patientName').value = '';
+            save();
+        }
+
+        function save() {
+            localStorage.setItem('pharma_v3_inv', JSON.stringify(inventory));
+            localStorage.setItem('pharma_v3_logs', JSON.stringify(logs));
+            updateUI();
+        }
+
+        function updateUI() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const invBody = document.getElementById('inventoryBody');
+            const manageInvBody = document.getElementById('manageInvBody');
+            const logBody = document.getElementById('logBody');
+            const select = document.getElementById('dispenseSelect');
+            const cartDiv = document.getElementById('cartItems');
+            const chartDiv = document.getElementById('analyticsChart');
+            
+            let lowCount = 0;
+            const usageMap = {};
+            invBody.innerHTML = ''; manageInvBody.innerHTML = '';
+            select.innerHTML = '<option value="">Select Medication...</option>';
+            
+            inventory.forEach((item, i) => {
+                if(item.qty <= 5) lowCount++;
+                if(item.name.toLowerCase().includes(query)) {
+                    invBody.innerHTML += `<tr><td class="p-4 font-bold">${item.name}</td><td class="p-4">${item.qty}</td><td class="p-4 text-right text-xs">${item.expiry}</td></tr>`;
+                }
+                manageInvBody.innerHTML += `<tr><td class="p-4 font-bold">${item.name}</td><td class="p-4">${item.qty}</td><td class="p-4 text-right flex justify-end gap-2"><button onclick="editMedicine(${i})" class="text-blue-500 font-bold">Edit</button><button onclick="deleteMedicine(${i})" class="text-red-400 font-bold">Del</button></td></tr>`;
+                select.innerHTML += `<option value="${i}">${item.name} (${item.qty})</option>`;
+            });
+
+            logs.forEach(l => l.items.forEach(it => usageMap[it.name] = (usageMap[it.name] || 0) + it.qty));
+            const top5 = Object.entries(usageMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            chartDiv.innerHTML = top5.map(([name, val]) => `<div class="text-xs mb-2"><b>${name}</b>: ${val} units</div>`).join('') || '<p class="text-xs text-slate-400">No data</p>';
+
+            document.getElementById('statTotal').innerText = inventory.length;
+            document.getElementById('statLow').innerText = lowCount;
+            document.getElementById('statIssued').innerText = logs.length;
+            cartDiv.innerHTML = cart.map((item, i) => `<div class="bg-white p-2 border rounded-xl text-xs font-bold mb-1">${item.name} x${item.qty}</div>`).join('');
+            logBody.innerHTML = logs.map(l => `<div class="p-4 border-b"><div class="font-bold">${l.patient}</div><div class="text-[10px] text-slate-400">${l.time}</div></div>`).join('') || '<p class="p-4 text-xs">No Records</p>';
+        }
+
+        function updatePharmacyName() { const name = document.getElementById('pharmacyNameInput').value; if(name) { localStorage.setItem('pharma_name', name); location.reload(); } }
+        function backupSystemData() { 
+            const blob = new Blob([JSON.stringify({inventory, logs, pharmacyName})], { type: 'application/json' }); 
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Facility_Backup_${new Date().toLocaleDateString()}.json`; link.click(); 
+        }
+        function clearLogs() { if(confirm("Wipe records?")) { logs = []; save(); } }
+        function downloadCSV() { let csv = "Timestamp,Patient,Medicine,Qty\n" + logs.flatMap(l => l.items.map(i => `${l.time.replace(/,/g,"")},${l.patient.replace(/,/g,"")},${i.name},${i.qty}`)).join("\n"); const blob = new Blob([csv], { type: 'text/csv' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "Audit_Report.csv"; link.click(); }
+
+        document.getElementById('displayPharmacyName').innerText = pharmacyName;
+        document.getElementById('pharmacyNameInput').value = pharmacyName;
+        document.getElementById('dateDisplay').innerText = new Date().toDateString();
+        const existingRecovery = localStorage.getItem('pharma_recovery');
+        if(existingRecovery) document.getElementById('recoveryDisplay').innerText = existingRecovery;
+        updateUI();
+    </script>
+</body>
+</html>
